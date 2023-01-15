@@ -1,4 +1,5 @@
 #include "linked_list.h"
+#include <stdio.h>
 
 
 struct Node *create_node(char *value)
@@ -11,88 +12,56 @@ struct Node *create_node(char *value)
     return new_node;
 }
 
-struct LinkedList create_list()
+struct LinkedList *create_list()
 {
-    struct LinkedList ll = {
-        .head = NULL,
-        .tail = NULL,
-    };
-
+    struct LinkedList *ll = malloc(sizeof(struct LinkedList));
+    ll->head = NULL;
+    ll->tail = NULL;
     return ll;
 }
 
-struct LinkedList create_list_with_head(char *value)
+struct LinkedList *create_list_with_head(char *value)
 {
-    struct LinkedList ll = {
-        .head = NULL,
-        .tail = NULL,
-    };
-
-    ll.head = create_node(value);
-
+    struct LinkedList *ll = malloc(sizeof(struct LinkedList));
+    ll->head = create_node(value);
+    ll->tail = NULL;
     return ll;
 }
 
 void add_new_head(struct LinkedList *ll, char *value)
 {
     struct Node *new_node = create_node(value);
-
     if(ll->head == NULL) {
-        ll->head = new_node;
+        ll->tail = new_node;
     } else {
-        new_node->next_node = ll->head;
-        ll->head = new_node;
+        ll->head->prev_node = new_node;
     }
-
-    assert(ll->head->prev_node == NULL);
-    assert(ll->head->value == new_node->value);
+    new_node->next_node = ll->head;
+    ll->head = new_node;
 }
 
 void add_new_tail(struct LinkedList *ll, char *value)
 {
     struct Node *new_node = create_node(value);
-    struct Node *cur_node = ll->head;
-
-    if(cur_node == NULL) {
-        cur_node = new_node;
-    } else {
-        while(cur_node->next_node != NULL)
-            cur_node = cur_node->next_node;
-        cur_node->next_node = new_node;
-        new_node->prev_node = cur_node;
+    if(ll->tail == NULL) {
         ll->tail = new_node;
+    } else {
+        ll->tail->next_node = new_node;
+        new_node->prev_node = ll->tail;
     }
-
-    assert(ll->tail->prev_node == cur_node);
-    assert(ll->tail->value == new_node->value);
-    assert(ll->tail->next_node == NULL);
+    ll->tail = new_node;
 }
 
-void add_at_index_from_head(struct LinkedList *ll, size_t idx, char *value)
+void add_at_index(struct LinkedList *ll, size_t idx, char *value)
 {
     struct Node *new_node = create_node(value);
     struct Node *cur_node = ll->head;
 
-    for(size_t i = 0; i < idx; i++) {
-        if(cur_node->next_node != NULL)
-            cur_node = cur_node->next_node;
+    for(size_t i = 0; i < idx || cur_node->next_node != NULL; i++) {
+        cur_node = cur_node->next_node;
     }
 
-    new_node->prev_node = cur_node->prev_node;
-    new_node->next_node = cur_node;
-    cur_node->prev_node = new_node;
-}
-
-void add_at_index_from_tail(struct LinkedList *ll, size_t idx, char *value)
-{
-    struct Node *new_node = create_node(value);
-    struct Node *cur_node = ll->tail;
-
-    for(size_t i = 0; i < idx; i++) {
-        if(cur_node->prev_node != NULL)
-            cur_node = cur_node->prev_node;
-    }
-
+    cur_node->prev_node->next_node = new_node;
     new_node->prev_node = cur_node->prev_node;
     new_node->next_node = cur_node;
     cur_node->prev_node = new_node;
@@ -105,7 +74,11 @@ bool is_empty(struct LinkedList ll)
 
 char *get_head(struct LinkedList ll)
 {
-    return ll.head->value;
+    if(ll.head == NULL)
+        puts("List is empty.");
+    else
+        return ll.head->value;
+    return NULL;
 }
 
 char *get_index(struct LinkedList ll, size_t idx)
@@ -115,7 +88,7 @@ char *get_index(struct LinkedList ll, size_t idx)
         if(cur->next_node != NULL) {
             cur = cur->next_node;
         } else {
-            printf("Reached end of list! Returning last value in list");
+            printf("Reached end of list. Returning item value in list.");
             break;
         }
     }
@@ -125,17 +98,22 @@ char *get_index(struct LinkedList ll, size_t idx)
 
 char *get_tail(struct LinkedList ll)
 {
-    return ll.tail->value;
+    if(ll.head == NULL)
+        puts("List is empty, or there is only one item in the list.");
+    else
+        return ll.tail->value;
+    return NULL;
 }
 
 void remove_head(struct LinkedList *ll)
 {
     if(ll->head == NULL) {
-        puts("List is empty!");
+        puts("List is empty.");
     } else {
         struct Node *old_head = ll->head;
         struct Node *new_head = ll->head->next_node;
         ll->head = new_head;
+        new_head->prev_node = NULL;
         old_head->next_node = NULL;
         free(old_head);
     }
@@ -144,11 +122,12 @@ void remove_head(struct LinkedList *ll)
 void remove_tail(struct LinkedList *ll)
 {
     if(ll->tail == NULL) {
-        puts("List is empty!");
+        puts("List is empty, or there is only one item in the list.");
     } else {
         struct Node *old_tail = ll->tail;
         struct Node *new_tail = ll->tail->prev_node;
         ll->tail = new_tail;
+        new_tail->next_node = NULL;
         old_tail->prev_node = NULL;
         free(old_tail);
     }
@@ -172,96 +151,100 @@ void remove_node(struct LinkedList *ll, struct Node *node)
     free(node);
 }
 
-void remove_at_index_from_head(struct LinkedList *ll, size_t idx)
+void remove_at_index(struct LinkedList *ll, size_t idx)
 {
     struct Node *cur_node = ll->head;
-    for(size_t i = 0; i < idx; i++) {
-        if(cur_node->next_node != NULL)
-            cur_node = cur_node->next_node;
+    for(size_t i = 0; i < idx || cur_node->next_node != NULL; i++) {
+        cur_node = cur_node->next_node;
     }
     remove_node(ll, cur_node);
 }
 
-void remove_at_index_from_tail(struct LinkedList *ll, size_t idx)
-{
-    struct Node *cur_node = ll->tail;
-    for(size_t i = 0; i < idx; i++) {
-        if(cur_node->prev_node != NULL)
-            cur_node = cur_node->prev_node;
-    }
-    remove_node(ll, cur_node);
-}
-
-/* clean up all nodes in list */
 void destroy_ll(struct LinkedList *ll)
 {
     while(ll->head != NULL) {
-        remove_head(ll);
+        if(ll->head->next_node != NULL) {
+            remove_head(ll);
+        } else {
+            ll->head = NULL;
+            free(ll->head);
+            ll = NULL;
+            break;
+        }
     }
 }
 
-void print_node(struct Node node, const char *node_name)
+void print_node(struct Node node)
 {
-    printf("%s: \n", node_name);
-    if(node.prev_node == NULL) {
-        printf("PREV: NULL, %p\nVAL: %s, %p\nNEXT: %s, %p\n",
-            (void *)node.prev_node,
-            node.value,
-            (void *)&node,
-            node.next_node->value,
-            (void *)node.next_node);
-    } else if(node.value == NULL) {
-        printf("PREV: %s, %p\nVAL: NULL, %p\nNEXT: %s, %p\n",
-            node.prev_node->value,
-            (void *)node.prev_node,
-            (void *)&node,
-            node.next_node->value,
-            (void *)node.next_node);
-    } else if(node.next_node == NULL) {
-        printf("PREV: %s, %p\nVAL: %s, %p\nNEXT: NULL, %p\n",
-            node.prev_node->value,
-            (void *)node.prev_node,
-            node.value,
-            (void *)&node,
-            (void *)node.next_node);
-    } else {
-        printf("PREV: %s, %p\nVAL: %s, %p\nNEXT: %s, %p\n",
-            node.prev_node->value,
-            (void *)node.prev_node,
-            node.value,
-            (void *)&node,
-            node.next_node->value,
-            (void *)node.next_node);
-    }
+    if(node.prev_node != NULL)
+        printf("PREV: %s, %p\n", node.prev_node->value,
+               (void *)node.prev_node);
+    else
+        printf("PREV: NULL, %p\n", (void *)node.prev_node);
+
+    if(node.value != NULL)
+        printf("VAL: %s, %p\n", node.value,
+               (void *)&node);
+    else
+        printf("VAL: NULL, %p\n", (void *)&node);
+
+    if(node.next_node != NULL)
+        printf("NEXT: %s, %p\n", node.next_node->value,
+               (void *)node.next_node);
+    else
+        printf("NEXT: NULL, %p\n", (void *)node.next_node);
+
+
     printf("\n");
 }
 
 void print_ll(struct LinkedList ll)
 {
+    if(ll.head == NULL) {
+        puts("List is empty!");
+        return;
+    }
+
     struct Node *cur_node = ll.head;
     while(cur_node != NULL) {
-        printf("%s\n", cur_node->value);
-        cur_node = cur_node->next_node;
+        if(cur_node->next_node == NULL) {
+            printf("%s\n", cur_node->value);
+            break;
+        } else {
+            printf("%s->", cur_node->value);
+            cur_node = cur_node->next_node;
+        }
     }
-    printf("\n");
+}
+
+void print_ll_detailed(struct LinkedList ll)
+{
+    if(ll.head == NULL) {
+        puts("List is empty.");
+        return;
+    }
+
+    size_t i = 0;
+    struct Node *cur_node = ll.head;
+    while(cur_node != NULL) {
+        printf("Node %zu:\n", i);
+        print_node(*cur_node);
+        cur_node = cur_node->next_node;
+        i++;
+    }
 }
 
 void print_head(struct LinkedList ll)
 {
-    printf("Head is: %s\n", ll.head->value);
+    printf("Head is: %s\n", get_head(ll));
 }
 
 void print_node_at_index(struct LinkedList ll, size_t idx)
 {
-    struct Node *cur_node = ll.head;
-    for(size_t i = 0; i < idx; i++) {
-        if(cur_node->next_node != NULL)
-            cur_node = cur_node->next_node;
-    }
-    printf("%s\n", cur_node->value);
+    printf("%s\n", get_index(ll, idx));
 }
 
 void print_tail(struct LinkedList ll)
 {
-    printf("Tail is: %s\n", ll.tail->value);
+    printf("Tail is: %s\n", get_tail(ll));
 }
